@@ -54,13 +54,18 @@ do
     local claimingboost = false
     local claimdelay = 10
     local boostdelay = 600
+    local selectedCurrency = "Solaris"
+    
+    local currencyDropdown = autoclaim:AddDropdown({ Name="Select Currency", Value="Solaris", List={"Solaris", "Bitcoin", "Quasar"}, Callback=function(v)
+        selectedCurrency = v
+    end})
     
     autoclaim:AddToggle({ Name="Auto Claim Money", Key=true, Value=false, Callback=function(yes)
         claiming = yes
         if yes then
             spawn(function()
                 while claiming do
-                    Exchange:InvokeServer("Solaris", 1)
+                    Exchange:InvokeServer(selectedCurrency, 1)
                     wait(claimdelay)
                 end
             end)
