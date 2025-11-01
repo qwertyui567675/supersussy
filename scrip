@@ -1,0 +1,186 @@
+local plr, char, mouse, human, torso
+repeat wait(); plr = game.Players.LocalPlayer until plr
+repeat wait(); mouse = plr:GetMouse() until mouse
+local input = game:GetService("UserInputService")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Exchange = ReplicatedStorage.Events.Exchanger.Exchange
+local ActivateOverclock = ReplicatedStorage.Events.ActivateOverclock
+
+--[[
+--
+-- Character
+--
+--]]
+
+do
+    function UpdateCharacter ()
+        char = plr.Character
+        human = char:WaitForChild("Humanoid")
+        torso = human.Torso
+    end
+    repeat wait() until plr.Character
+    UpdateCharacter()
+    plr.CharacterAdded:Connect(UpdateCharacter)
+    plr.CharacterRemoving:Connect(function()
+        flying = false
+    end)
+end
+
+--[[
+--
+-- UI
+--
+--]]
+
+local pepsi = loadstring(game:GetObjects("rbxassetid://7657867786")[1].Source)():CreateWindow({
+    Name = "Bitcoin Miner Script",
+    Themeable = {
+        Info = "by Nerdywerdy"
+    }
+})
+local general = pepsi:CreateTab({ Name="General" })
+local player = pepsi:CreateTab({ Name="Player" })
+
+--[[
+--
+-- Auto Claim Money
+--
+--]]
+
+do
+    local autoclaim = general:CreateSection({ Name="Auto Claim" })
+    local claiming = false
+    local claimingboost = false
+    local claimdelay = 10
+    local boostdelay = 600
+    
+    autoclaim:AddToggle({ Name="Auto Claim Money", Key=true, Value=false, Callback=function(yes)
+        claiming = yes
+        if yes then
+            spawn(function()
+                while claiming do
+                    Exchange:InvokeServer("Solaris", 1)
+                    wait(claimdelay)
+                end
+            end)
+        end
+    end})
+    
+    autoclaim:AddSlider({ Name="Claim Delay (seconds)", Value=10, Min=1, Max=60, Callback=function(v)
+        claimdelay = v
+    end})
+    
+    autoclaim:AddToggle({ Name="Claim Boost Star", Key=true, Value=false, Callback=function(yes)
+        claimingboost = yes
+        if yes then
+            spawn(function()
+                while claimingboost do
+                    Exchange:InvokeServer("Solaris", 1)
+                    wait(boostdelay)
+                end
+            end)
+        end
+    end})
+    
+    autoclaim:AddSlider({ Name="Boost Delay (minutes)", Value=10, Min=1, Max=30, Callback=function(v)
+        boostdelay = v * 60
+    end})
+end
+
+--[[
+--
+-- Auto Overclock
+--
+--]]
+
+do
+    local overclockSection = general:CreateSection({ Name="Overclock" })
+    local overclocking = false
+    local overclockdelay = 120
+    
+    overclockSection:AddToggle({ Name="Auto Activate Overclock", Key=true, Value=false, Callback=function(yes)
+        overclocking = yes
+        if yes then
+            spawn(function()
+                while overclocking do
+                    ActivateOverclock:FireServer()
+                    wait(overclockdelay)
+                end
+            end)
+        end
+    end})
+    
+    overclockSection:AddSlider({ Name="Overclock Delay (minutes)", Value=2, Min=1, Max=10, Callback=function(v)
+        overclockdelay = v * 60
+    end})
+    
+    overclockSection:AddButton({ Name="Activate Overclock Now", Callback=function()
+        ActivateOverclock:FireServer()
+    end})
+end
+
+--[[
+--
+-- Player Settings
+--
+--]]
+
+do
+    local movement = player:CreateSection({ Name="Movement" })
+    
+    movement:AddSlider({ Name="Walk Speed", Value=16, Min=16, Max=500, Callback=function(v)
+        human.WalkSpeed = v
+    end})
+end
+
+--[[
+--
+-- Fly
+--
+--]]
+
+do
+    local flying = false
+    local flyspeed = 65
+    
+    function Fly()
+        local bg = Instance.new("BodyGyro", torso)
+        bg.P = 9e4
+        bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        local bv = Instance.new("BodyVelocity", torso)
+        bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        human.PlatformStand = true
+        
+        while flying do
+            local camframe = game.Workspace.CurrentCamera.CoordinateFrame
+            bg.cframe = camframe
+            bv.velocity = Vector3.zero
+            
+            if input:IsKeyDown(Enum.KeyCode.W) then bv.velocity += flyspeed * camframe.LookVector end
+            if input:IsKeyDown(Enum.KeyCode.A) then bv.velocity += flyspeed * camframe.RightVector * -1 end
+            if input:IsKeyDown(Enum.KeyCode.S) then bv.velocity += flyspeed * camframe.LookVector * -1 end
+            if input:IsKeyDown(Enum.KeyCode.D) then bv.velocity += flyspeed * camframe.RightVector end
+            if input:IsKeyDown(Enum.KeyCode.Space) then bv.velocity += flyspeed * Vector3.new(0,1,0) end
+            if input:IsKeyDown(Enum.KeyCode.LeftShift) then bv.velocity += flyspeed * Vector3.new(0,-1,0) end
+            
+            wait()
+        end
+        
+        bg:Destroy()
+        bv:Destroy()
+        human.PlatformStand = false
+    end
+    
+    local flySection = player:CreateSection({ Name="Fly" })
+    
+    flySection:AddToggle({ Name="Fly", Key=true, Value=false, Callback=function(yes)
+        flying = yes
+        if yes then Fly() end
+    end})
+    
+    flySection:AddSlider({ Name="Fly Speed", Value=65, Min=1, Max=500, Callback=function(v)
+        flyspeed = v
+    end})
+end
